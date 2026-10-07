@@ -25,7 +25,8 @@ BitTorrent-движок написан с нуля на чистом Python — 
 
 - 📁 добавление `.torrent`-файлов и 🧲 magnet-ссылок (в т.ч. drag&drop в окно)
 - 🗂 диалог добавления: имя, размер, список файлов, выбор диска и папки
-- ☑️ выбор файлов для скачивания: лишние не качаются и не создаются на диске
+- ☑️ выбор файлов для скачивания: дерево папок с галочками — снятие папки убирает
+  и всё её содержимое; лишние не качаются и не создаются на диске
 - ⬇️⬆️ полноценная загрузка **и раздача**, докачка после перезапуска
 - ⏸ пауза/возобновление, удаление (с файлами или без), перепроверка файлов
 - 🎬 последовательная загрузка (удобно для видео)
@@ -137,7 +138,8 @@ MIT — см. [LICENSE](LICENSE).
 
 - 📁 add `.torrent` files and 🧲 magnet links (drag & drop into the window works too)
 - 🗂 add dialog: name, size, file list, drive/folder picker
-- ☑️ file selection: skipped files are neither downloaded nor created on disk
+- ☑️ file selection: folder tree with checkboxes — unchecking a folder skips
+  everything inside; skipped files are neither downloaded nor created on disk
 - ⬇️⬆️ full download **and seeding**, resume across restarts
 - ⏸ pause/resume, remove (with or without files), force recheck
 - 🎬 sequential download (great for video)

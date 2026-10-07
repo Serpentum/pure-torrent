@@ -10,7 +10,7 @@ from PySide6.QtGui import (QAction, QColor, QDesktopServices, QDragEnterEvent,
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog,
     QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QHeaderView,
-    QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+    QInputDialog, QLabel, QLineEdit, QMainWindow,
     QMenu, QMessageBox, QPushButton, QSpinBox, QStyledItemDelegate, QToolBar,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget, QSizePolicy,
 )
@@ -224,26 +224,66 @@ class AddTorrentDialog(QDialog):
             self.lbl_info = QLabel(f"{human_size(size)} · {n_files} файл(ов)")
             root.addWidget(self.lbl_info)
             if n_files > 1:
-                lw = QListWidget()
-                lw.setMaximumHeight(220)
+                self._leaves = {}        # индекс файла -> лист дерева
                 self._building = True
                 MAX_SHOW = 2000
+                tw = QTreeWidget()
+                tw.setColumnCount(2)
+                tw.setHeaderLabels(["Файл", "Размер"])
+                tw.setMaximumHeight(280)
+                tw.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+                tw.header().resizeSection(0, 340)
+                tw.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+                folders: dict[str, QTreeWidgetItem] = {}
+                folder_size: dict[str, int] = {}
+
+                def folder_node(parts: list) -> QTreeWidgetItem | None:
+                    node = None
+                    key = ""
+                    for part in parts:
+                        key = f"{key}/{part}" if key else part
+                        if key not in folders:
+                            it = QTreeWidgetItem(node if node is not None else tw,
+                                                 [part, ""])
+                            it.setFlags(Qt.ItemFlag.ItemIsUserCheckable |
+                                        Qt.ItemFlag.ItemIsEnabled |
+                                        Qt.ItemFlag.ItemIsSelectable)
+                            it.setCheckState(0, Qt.CheckState.Checked)
+                            folders[key] = it
+                        node = folders[key]
+                    return node
+
                 for i, (p, s) in enumerate(files[:MAX_SHOW]):
-                    it = QListWidgetItem(f"{p} — {human_size(s)}")
-                    it.setFlags(Qt.ItemFlag.ItemIsUserCheckable |
-                                Qt.ItemFlag.ItemIsEnabled |
-                                Qt.ItemFlag.ItemIsSelectable)
-                    it.setCheckState(Qt.CheckState.Checked)
-                    it.setData(Qt.ItemDataRole.UserRole, i)
-                    lw.addItem(it)
+                    parts = p.replace("\\", "/").split("/")
+                    node = folder_node(parts[:-1])
+                    leaf = QTreeWidgetItem(node if node is not None else tw,
+                                           [parts[-1], human_size(s)])
+                    leaf.setFlags(Qt.ItemFlag.ItemIsUserCheckable |
+                                  Qt.ItemFlag.ItemIsEnabled |
+                                  Qt.ItemFlag.ItemIsSelectable)
+                    leaf.setCheckState(0, Qt.CheckState.Checked)
+                    leaf.setData(0, Qt.ItemDataRole.UserRole, i)
+                    self._leaves[i] = leaf
+                    k = "/".join(parts[:-1])
+                    while k:
+                        folder_size[k] = folder_size.get(k, 0) + s
+                        k = k.rsplit("/", 1)[0] if "/" in k else ""
+                for key, it in folders.items():
+                    it.setText(1, human_size(folder_size.get(key, 0)))
                 if n_files > MAX_SHOW:
-                    tail = QListWidgetItem(f"… и ещё {n_files - MAX_SHOW} (исключить нельзя)")
+                    tail = QTreeWidgetItem(tw,
+                                           [f"… и ещё {n_files - MAX_SHOW} (исключить нельзя)", ""])
                     tail.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                    lw.addItem(tail)
+                # маленькие торренты показываем целиком, большие — до папок 1-го уровня
+                if n_files <= 100:
+                    tw.expandAll()
+                else:
+                    for i in range(tw.topLevelItemCount()):
+                        tw.topLevelItem(i).setExpanded(True)
                 self._building = False
-                lw.itemChanged.connect(self._on_file_item_changed)
-                root.addWidget(lw)
-                self.lw = lw
+                tw.itemChanged.connect(self._on_file_item_changed)
+                root.addWidget(tw)
+                self.tw = tw
                 rowf = QWidget()
                 hf = QHBoxLayout(rowf)
                 hf.setContentsMargins(0, 0, 0, 0)
@@ -326,17 +366,44 @@ class AddTorrentDialog(QDialog):
 
     # ---------- выбор файлов ----------
 
-    def _on_file_item_changed(self, _item):
-        if not self._building:
-            self._update_sel_size()
+    def _on_file_item_changed(self, item):
+        """Клик по галочке: раздать состояние потомкам, пересобрать предков."""
+        if self._building:
+            return
+        self._building = True
+        state = item.checkState(0)
+        if state != Qt.CheckState.PartiallyChecked:
+            self._set_subtree(item, state)
+            parent = item.parent()
+            while parent is not None:
+                parent.setCheckState(0, self._subtree_state(parent))
+                parent = parent.parent()
+        self._building = False
+        self._update_sel_size()
+
+    def _set_subtree(self, item, state):
+        item.setCheckState(0, state)
+        for i in range(item.childCount()):
+            self._set_subtree(item.child(i), state)
+
+    @staticmethod
+    def _subtree_state(item) -> Qt.CheckState:
+        all_on = all_off = True
+        for i in range(item.childCount()):
+            s = item.child(i).checkState(0)
+            if s != Qt.CheckState.Checked:
+                all_on = False
+            if s != Qt.CheckState.Unchecked:
+                all_off = False
+        return (Qt.CheckState.Checked if all_on
+                else Qt.CheckState.Unchecked if all_off
+                else Qt.CheckState.PartiallyChecked)
 
     def _check_all(self, on: bool):
         state = Qt.CheckState.Checked if on else Qt.CheckState.Unchecked
         self._building = True
-        for i in range(self.lw.count()):
-            it = self.lw.item(i)
-            if it.flags() & Qt.ItemFlag.ItemIsUserCheckable:
-                it.setCheckState(state)
+        for i in range(self.tw.topLevelItemCount()):
+            self._set_subtree(self.tw.topLevelItem(i), state)
         self._building = False
         self._update_sel_size()
 
@@ -351,16 +418,10 @@ class AddTorrentDialog(QDialog):
             self.lbl_info.setText(f"{len(self._files)} файл(ов), отмечено {len(self.checked_files())}")
 
     def checked_files(self) -> set:
-        lw = getattr(self, "lw", None)
-        if lw is None:
+        if not hasattr(self, "tw"):
             return set(range(len(getattr(self, "_files", []))))
-        out = set()
-        for i in range(lw.count()):
-            it = lw.item(i)
-            if (it.flags() & Qt.ItemFlag.ItemIsUserCheckable) \
-                    and it.checkState() == Qt.CheckState.Checked:
-                out.add(it.data(Qt.ItemDataRole.UserRole))
-        return out
+        return {i for i, leaf in self._leaves.items()
+                if leaf.checkState(0) == Qt.CheckState.Checked}
 
     def skipped_files(self) -> set:
         """Индексы файлов, снятых галочкой (не качать)."""
