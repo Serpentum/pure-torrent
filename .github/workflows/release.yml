@@ -70,8 +70,8 @@ jobs:
           PR=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
                --jq '.[0].number // empty')
           if [ -n "$PR" ]; then
-            gh pr view "$PR" --json title,body,number,html_url \
-              --jq '"## " + .title + " (#" + (.number|tostring) + ")\n\n" + (.body // "") + "\n\n---\n🔗 " + .html_url' \
+            gh pr view "$PR" --json title,body,number,url \
+              --jq '"## " + .title + " (#" + (.number|tostring) + ")\n\n" + (.body // "") + "\n\n---\n🔗 " + .url' \
               > changelog.md
             echo "Чендлог: из PR #$PR"
           else
