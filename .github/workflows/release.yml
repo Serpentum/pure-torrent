@@ -23,6 +23,8 @@ jobs:
   test:
     name: Тесты движка (офлайн)
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"    # русские print() в cp1252-консоли раннера
     steps:
       - uses: actions/checkout@v4
 
@@ -47,6 +49,8 @@ jobs:
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
 
