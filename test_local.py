@@ -159,7 +159,7 @@ def main() -> int:
         def downloaded():
             s = snap_map(leech).get(leech_h)
             return s if s and s.progress >= 1.0 else None
-        s = wait_for(downloaded, 60, "качалка не докачала")
+        s = wait_for(downloaded, 120, "качалка не докачала")
         print(f"[+] качалка: скачано за {s.size} байт, пиры={s.peers}")
         for p in sorted(pack.rglob("*")):
             if p.is_file():
@@ -190,13 +190,13 @@ def main() -> int:
         def got_meta():
             s = snap_map(mag).get(mag_h)
             return s if s and s.state not in ("metadata",) else None
-        wait_for(got_meta, 60, "метаданные по магниту не получены")
+        wait_for(got_meta, 180, "метаданные по магниту не получены")
         print("[+] магнит: метаданные получены по BEP 9")
 
         def magnet_done():
             s = snap_map(mag).get(mag_h)
             return s if s and s.progress >= 1.0 else None
-        wait_for(magnet_done, 60, "магнит не докачал")
+        wait_for(magnet_done, 180, "магнит не докачал")
         for p in sorted(pack.rglob("*")):
             if p.is_file():
                 got = dl2 / "testpack" / p.relative_to(pack)

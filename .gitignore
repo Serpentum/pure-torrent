@@ -17,3 +17,7 @@ tmp_real/
 settings.json
 state.json
 pieces/
+
+# Временные файлы (_*.zip/_*.json)
+_*.zip
+_*.json
