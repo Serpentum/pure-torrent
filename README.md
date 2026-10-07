@@ -40,7 +40,9 @@ BitTorrent-движок написан с нуля на чистом Python — 
 
 Готовый портативный `PureTorrent.exe` собирается автоматически — берите свежий
 с [страницы релизов](https://github.com/Serpentum/pure-torrent/releases/latest):
-каждый пуш в `main` поднимает версию (patch) и публикует новый релиз.
+каждый смёрженный в `main` Pull Request поднимает версию (patch) и публикует
+новый релиз, а описание PR становится ченджлогом релиза. Прямые пуши в `main`
+запрещены — изменения заходят только через PR с зелёными тестами.
 
 > ⚠️ exe не подписан — Windows SmartScreen может предупредить при первом запуске
 > («Подробнее → Выполнить в любом случае») или добавьте исключение.
@@ -141,7 +143,9 @@ MIT — см. [LICENSE](LICENSE).
 
 A portable `PureTorrent.exe` is built automatically — grab the latest one from the
 [releases page](https://github.com/Serpentum/pure-torrent/releases/latest):
-every push to `main` bumps the patch version and publishes a new release.
+every Pull Request merged into `main` bumps the patch version and publishes a
+release, with the PR description serving as the release changelog. Direct pushes
+to `main` are forbidden — changes land only via PRs with passing tests.
 
 > ⚠️ The exe is unsigned — Windows SmartScreen may warn on first launch
 > ("More info → Run anyway") or add an exclusion.

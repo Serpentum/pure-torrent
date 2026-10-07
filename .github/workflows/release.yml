@@ -2,8 +2,9 @@ name: CI & Release
 
 on:
   push:
-    branches: [main]
+    branches: [main]        # фактический триггер релиза — мердж PR (прямые пуши запрещены правилами ветки)
   pull_request:
+    branches: [main]        # на PR — только тесты
   workflow_dispatch:
     inputs:
       bump:
@@ -61,6 +62,24 @@ jobs:
       - name: Зависимости
         run: pip install -r requirements.txt pyinstaller
 
+      - name: Чендлог из Pull Request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+               --jq '.[0].number // empty')
+          if [ -n "$PR" ]; then
+            gh pr view "$PR" --json title,body,number,html_url \
+              --jq '"## " + .title + " (#" + (.number|tostring) + ")\n\n" + (.body // "") + "\n\n---\n🔗 " + .html_url' \
+              > changelog.md
+            echo "Чендлог: из PR #$PR"
+          else
+            { echo "## Изменения"
+              echo ""
+              echo "Изменение внесено без Pull Request (ручной запуск или прямой пуш)." ; } > changelog.md
+          fi
+
       - name: Следующая версия релиза
         shell: bash
         env:
@@ -106,5 +125,5 @@ jobs:
             "dist/PureTorrent.exe" \
             "dist/PureTorrent-v${VERSION}.zip" \
             --title "PureTorrent v${VERSION}" \
-            --generate-notes \
+            --notes-file changelog.md \
             --target "$GITHUB_SHA"
