@@ -45,6 +45,9 @@ jobs:
       - name: "Тест: отпускание файлов (пауза/раздача)"
         run: python test_release.py
 
+      - name: "Тест: дерево файлов в диалоге (offscreen)"
+        run: python test_dialog.py
+
   release:
     name: Сборка exe и релиз
     needs: test
