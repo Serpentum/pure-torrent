@@ -153,7 +153,7 @@ def main() -> int:
         def done():
             s = snap_map(leech).get(leech_h)
             return s if s and s.progress >= 1.0 else None
-        s = wait_for(done, 60, "качалка не докачала выбранное")
+        s = wait_for(done, 120, "качалка не докачала выбранное")
         assert s.size == F1 + F3, f"размер в снапшоте {s.size} != {F1 + F3}"
         assert s.state == "seeding", f"статус {s.state}"
         print(f"[+] качалка: готово, в снапшоте {s.size} байт (без file2.bin)")

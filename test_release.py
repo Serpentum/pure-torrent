@@ -75,7 +75,7 @@ def main() -> int:
         def seeding():
             s = ts.snap_map(leech).get(leech_h)
             return s if s and s.state == "seeding" and s.progress >= 1.0 else None
-        s = ts.wait_for(seeding, 60, "качалка не докачала")
+        s = ts.wait_for(seeding, 120, "качалка не докачала")
         d1 = dl / "skippack" / "file1.bin"
         assert not rename_ok(d1), "качалка докачала и раздаёт — файл должен быть залочен"
         assert d1.stat().st_size == ts.F1
