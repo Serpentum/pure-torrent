@@ -1,0 +1,106 @@
+name: CI & Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Тип повышения версии"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Тесты движка (офлайн)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Зависимости
+        run: pip install -r requirements.txt
+
+      - name: "e2e: трекер + сид + качалка + магнит (BEP 9)"
+        run: python test_local.py
+
+      - name: "Тест: исключение файлов (skip_files)"
+        run: python test_skip.py
+
+      - name: "Тест: отпускание файлов (пауза/раздача)"
+        run: python test_release.py
+
+  release:
+    name: Сборка exe и релиз
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Зависимости
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Следующая версия релиза
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMP: ${{ github.event.inputs.bump || 'patch' }}
+        run: |
+          LATEST=$(gh release list --limit 1 --json tagName \
+            -q 'map(.tagName) | first // ""' | sed 's/^v//')
+          if [ -z "$LATEST" ]; then
+            VER=$(python -c "import version; print(version.__version__)")
+          else
+            VER=$(python - "$LATEST" "$BUMP" <<'PYEOF'
+          import sys
+          major, minor, patch = (int(x) for x in sys.argv[1].split("."))
+          kind = sys.argv[2]
+          if kind == "major":
+              major, minor, patch = major + 1, 0, 0
+          elif kind == "minor":
+              minor, patch = minor + 1, 0
+          else:
+              patch += 1
+          print(f"{major}.{minor}.{patch}")
+          PYEOF
+          )
+          fi
+          echo "VERSION=$VER" >> "$GITHUB_ENV"
+          printf '__version__ = "%s"\n' "$VER" > version.py
+          echo "Следующая версия: v$VER"
+
+      - name: Сборка PureTorrent.exe
+        run: python -m PyInstaller --noconsole --onefile --name PureTorrent app.py
+
+      - name: Zip-архив
+        shell: pwsh
+        run: Compress-Archive -Path dist/PureTorrent.exe -DestinationPath "dist/PureTorrent-v${{ env.VERSION }}.zip"
+
+      - name: Публикация релиза
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" \
+            "dist/PureTorrent.exe" \
+            "dist/PureTorrent-v${VERSION}.zip" \
+            --title "PureTorrent v${VERSION}" \
+            --generate-notes \
+            --target "$GITHUB_SHA"

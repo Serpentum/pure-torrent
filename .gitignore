@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Сборка
+build/
+dist/
+*.exe
+*.spec.bak
+
+# Локальные тестовые данные (торренты, скриншоты)
+tmp_real/
+*.torrent
+
+# Состояние приложения
+settings.json
+state.json
+pieces/
