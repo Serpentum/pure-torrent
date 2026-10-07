@@ -70,6 +70,15 @@ python test_release.py   :: отпускание файлов на паузе/п
 python test_dnd.py       :: файл-аргумент/drag&drop (offscreen)
 ```
 
+### 🧰 Отладка
+
+Переменная окружения `PT_DEBUG=1` включает отладочный дамп движка в консоль
+каждые 5 секунд (состояния торрентов, пирующие адреса, ошибки трекеров):
+
+```bat
+set PT_DEBUG=1 && .venv\Scripts\python.exe app.py
+```
+
 ### 🏗️ Архитектура
 
 | Файл | За что отвечает |
@@ -169,6 +178,15 @@ python test_local.py     :: e2e: tracker + seed + leech + magnet (BEP 9)
 python test_skip.py      :: file skipping, piece mask, restart
 python test_release.py   :: file handle release on pause/seed
 python test_dnd.py       :: file argument / drag & drop (offscreen)
+```
+
+### 🧰 Debugging
+
+The `PT_DEBUG=1` environment variable prints an engine debug dump to the console
+every 5 seconds (torrent states, peer addresses, tracker errors):
+
+```bat
+set PT_DEBUG=1 && .venv\Scripts\python.exe app.py
 ```
 
 ### 🏗️ Architecture
